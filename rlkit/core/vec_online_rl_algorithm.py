@@ -1,5 +1,5 @@
 import abc
-
+from tensorboardX import SummaryWriter
 import gtimer as gt
 from rlkit.core import eval_util, logger
 from rlkit.core.rl_algorithm import BaseRLAlgorithm, _get_epoch_timings
@@ -34,6 +34,8 @@ class VecOnlineRLAlgorithm(BaseRLAlgorithm, metaclass=abc.ABCMeta):
             evaluation_data_collector,
             replay_buffer,
         )
+        self.writer = SummaryWriter('temp/')
+        self.count = 0
         self.batch_size = batch_size
         self.max_path_length = max_path_length
         self.num_epochs = num_epochs
@@ -64,7 +66,7 @@ class VecOnlineRLAlgorithm(BaseRLAlgorithm, metaclass=abc.ABCMeta):
 
         train_data = self.replay_buffer.next_batch(self.batch_size)
         for epoch in gt.timed_for(
-                range(self._start_epoch, self.num_epochs),
+                range(self._start_epoch, 770),
                 save_itrs=True,
         ):
             for _ in range(self.num_train_loops_per_epoch):
@@ -92,8 +94,9 @@ class VecOnlineRLAlgorithm(BaseRLAlgorithm, metaclass=abc.ABCMeta):
                 discard_incomplete_paths=True,
             )
             gt.stamp('evaluation sampling')
-
+            self.count += 1
             self._end_epoch(epoch)
+        self.writer.close()
 
     def _get_snapshot(self):
         snapshot = {}
@@ -138,7 +141,10 @@ class VecOnlineRLAlgorithm(BaseRLAlgorithm, metaclass=abc.ABCMeta):
             eval_util.get_generic_path_information(eval_paths),
             prefix="evaluation/",
         )
-
+        print (eval_util.get_generic_path_information(eval_paths)['Average Returns'])
+        self.writer.add_scalar('Average Returns', eval_util.get_generic_path_information(eval_paths)['Average Returns'], self.count)
+        self.writer.add_scalar('Returns Min', eval_util.get_generic_path_information(eval_paths)['Returns Min'], self.count)
+        self.writer.add_scalar('Rewards Min', eval_util.get_generic_path_information(eval_paths)['Rewards Min'], self.count)
         """
         Misc
         """

@@ -66,7 +66,7 @@ class VecOnlineRLAlgorithm(BaseRLAlgorithm, metaclass=abc.ABCMeta):
 
         train_data = self.replay_buffer.next_batch(self.batch_size)
         for epoch in gt.timed_for(
-                range(self._start_epoch, 770),
+                range(self._start_epoch, 900),
                 save_itrs=True,
         ):
             for _ in range(self.num_train_loops_per_epoch):
@@ -141,16 +141,23 @@ class VecOnlineRLAlgorithm(BaseRLAlgorithm, metaclass=abc.ABCMeta):
             eval_util.get_generic_path_information(eval_paths),
             prefix="evaluation/",
         )
-        returns = [min(path["rewards"]) for path in eval_paths]
-        print(min(returns))
-        print(eval_util.get_generic_path_information(eval_paths)['Returns Min'])
+        def flatten(l):
+          return [item for sublist in l for item in sublist]
+        returns = []
+        for path in eval_paths:
+          returns += flatten(path["rewards"])
+        returns.sort()
+        num = int(0.05 * len(returns))
+        minReturns = int(sum(returns[:num]) / num)
+        print (returns)
+        print (len(returns))
         self.writer.add_scalar('Average Returns', eval_util.get_generic_path_information(eval_paths)['Average Returns'],
                                self.count)
-        self.writer.add_scalar('Returns Min', min(returns), self.count)
+        self.writer.add_scalar('Returns Min', minReturns, self.count)
         """
         Misc
         """
         gt.stamp('logging')
         logger.record_dict(_get_epoch_timings())
         logger.record_tabular('Epoch', epoch)
-        logger.dump_tabular(with_prefix=False, with_timestamp=False)
+        #logger.dump_tabular(with_prefix=False, with_timestamp=False)

@@ -141,10 +141,12 @@ class VecOnlineRLAlgorithm(BaseRLAlgorithm, metaclass=abc.ABCMeta):
             eval_util.get_generic_path_information(eval_paths),
             prefix="evaluation/",
         )
-        print (eval_util.get_generic_path_information(eval_paths)['Average Returns'])
-        self.writer.add_scalar('Average Returns', eval_util.get_generic_path_information(eval_paths)['Average Returns'], self.count)
-        self.writer.add_scalar('Returns Min', eval_util.get_generic_path_information(eval_paths)['Returns Min'], self.count)
-        self.writer.add_scalar('Rewards Min', eval_util.get_generic_path_information(eval_paths)['Rewards Min'], self.count)
+        returns = [min(path["rewards"]) for path in eval_paths]
+        print(min(returns))
+        print(eval_util.get_generic_path_information(eval_paths)['Returns Min'])
+        self.writer.add_scalar('Average Returns', eval_util.get_generic_path_information(eval_paths)['Average Returns'],
+                               self.count)
+        self.writer.add_scalar('Returns Min', min(returns), self.count)
         """
         Misc
         """

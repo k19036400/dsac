@@ -10,7 +10,6 @@ import rlkit.torch.pytorch_util as ptu
 from rlkit.core.eval_util import create_stats_ordered_dict
 from rlkit.torch.torch_rl_algorithm import TorchTrainer
 
-from .risk import distortion_de
 from .utils import LinearSchedule
 
 
@@ -238,7 +237,11 @@ class DSACTrainer(TorchTrainer):
                     q2_new_actions -= risk_param * q2_std.sum(dim=1, keepdims=True).sqrt()
             else:
                 with torch.no_grad():
-                    risk_weights = distortion_de(new_tau_hat, self.risk_type, risk_param)
+                    changed_tau = new_tau_hat.clamp(0., 1.)
+                    if risk_param >= 0:
+                        risk_weights = (1. / risk_param) * (changed_tau < risk_param)
+                    else:
+                        risk_weights = (1. / (-risk_param)) * ((1 - changed_tau) < (-risk_param))
                 q1_new_actions = torch.sum(risk_weights * new_presum_tau * z1_new_actions, dim=1, keepdims=True)
                 q2_new_actions = torch.sum(risk_weights * new_presum_tau * z2_new_actions, dim=1, keepdims=True)
         q_new_actions = torch.min(q1_new_actions, q2_new_actions)

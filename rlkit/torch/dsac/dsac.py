@@ -310,6 +310,15 @@ class DSACTrainer(TorchTrainer):
 
     def get_diagnostics(self):
         return self.eval_statistics
+    
+    def add_list(self, a, b):
+        x = []
+        for a1 in range(int(len(a))):
+            x.append([a[a1], b[a1]])
+        device = torch.device('cuda')
+        cpu_tensor = torch.Tensor(x)
+        gpu_tensor = cpu_tensor.to(device)
+        return gpu_tensor
 
     def end_epoch(self, epoch):
         self._need_to_update_eval_statistics = True

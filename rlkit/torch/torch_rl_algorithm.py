@@ -52,6 +52,9 @@ class TorchTrainer(Trainer, metaclass=abc.ABCMeta):
         self._num_train_steps += 1
         self.train_from_torch(batch)
 
+    def clear_history(self):
+        self.clear_history()
+
     def get_diagnostics(self):
         return OrderedDict([
             ('num train calls', self._num_train_steps),

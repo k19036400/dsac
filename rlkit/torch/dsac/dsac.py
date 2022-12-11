@@ -246,18 +246,21 @@ class DSACTrainer(TorchTrainer):
                 q1_new_actions = torch.sum(risk_weights * new_presum_tau * z1_new_actions, dim=1, keepdims=True)
                 q2_new_actions = torch.sum(risk_weights * new_presum_tau * z2_new_actions, dim=1, keepdims=True)
         q_new_actions = torch.min(q1_new_actions, q2_new_actions)
-        self.history = self.add_list(self.history, q_new_actions)
-        lambda_risk = self.cvar(self.history, risk_param)
-        lambda_loss = torch.sum(lambda_risk * self.history, dim=1, keepdims=True)
-        if self.lambda_value == None:
-            self.lambda_value = self.lambda_lr * lambda_loss
-        else:
-            self.lambda_value = self.lambda_value + self.lambda_lr * lambda_loss
+        with torch.no_grad():
+            self.history = self.add_list(self.history, q_new_actions)
+            print (len(self.history[0]))
+            lambda_risk = self.cvar(self.history, risk_param)
+            lambda_loss = torch.sum(lambda_risk * self.history, dim=1, keepdims=True)
+            if self.lambda_value == None:
+                self.lambda_value = self.lambda_lr * lambda_loss
+            else:
+                self.lambda_value = self.lambda_value + self.lambda_lr * lambda_loss
         #self.lambda_optimizer.zero_grad()
         #lambda_loss.backward()
         #self.lambda_optimizer.step()
         #gt.stamp('backward_lambda', unique=False)
-        policy_loss = (alpha * log_pi - q_new_actions).mean()
+        p_loss = (alpha * log_pi - q_new_actions)
+        policy_loss = (p_loss + self.lambda_value * p_loss).mean()
         
         gt.stamp('preback_policy', unique=False)
 
@@ -338,7 +341,10 @@ class DSACTrainer(TorchTrainer):
             return b
         x = []
         for a1 in range(int(len(a))):
-            x.append(list(a[a1]) + list(b[a1]))
+            if len(list(a[a1])) < 20:
+                x.append(list(a[a1]) + list(b[a1]))
+            else:
+                x.append(list(a[a1])[1:] + list(b[a1]))
         device = torch.device('cuda')
         cpu_tensor = torch.Tensor(x)
         gpu_tensor = cpu_tensor.to(device)

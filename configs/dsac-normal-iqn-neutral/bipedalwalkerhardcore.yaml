@@ -20,4 +20,6 @@ trainer_kwargs:
   tau_type: iqn
   use_automatic_entropy_tuning: false
   zf_lr: 0.0003
+  risk_type: cvar
+  risk_param: 0.1
 version: normal-iqn-neutral

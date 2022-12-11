@@ -1,6 +1,7 @@
 import abc
 from tensorboardX import SummaryWriter
 import gtimer as gt
+from datetime import datetime
 from rlkit.core import eval_util, logger
 from rlkit.core.rl_algorithm import BaseRLAlgorithm, _get_epoch_timings
 from rlkit.data_management.torch_replay_buffer import TorchReplayBuffer
@@ -66,9 +67,12 @@ class VecOnlineRLAlgorithm(BaseRLAlgorithm, metaclass=abc.ABCMeta):
 
         train_data = self.replay_buffer.next_batch(self.batch_size)
         for epoch in gt.timed_for(
-                range(self._start_epoch, 900),
+                range(self._start_epoch, 360),
                 save_itrs=True,
         ):
+            now = datetime.now()
+            current_time = now.strftime("%H:%M:%S")
+            print("Current Time =", current_time)
             for _ in range(self.num_train_loops_per_epoch):
                 for _ in range(self.num_expl_steps_per_train_loop // self.expl_env.env_num):
                     new_expl_steps = self.expl_data_collector.collect_new_steps(
@@ -86,6 +90,7 @@ class VecOnlineRLAlgorithm(BaseRLAlgorithm, metaclass=abc.ABCMeta):
                         gt.stamp('training', unique=False)
                         train_data = self.replay_buffer.next_batch(self.batch_size)
                         gt.stamp('data sampling', unique=False)
+                    #self.trainer.clear_history()
                     self.training_mode(False)
 
             self.eval_data_collector.collect_new_paths(
@@ -160,4 +165,4 @@ class VecOnlineRLAlgorithm(BaseRLAlgorithm, metaclass=abc.ABCMeta):
         gt.stamp('logging')
         logger.record_dict(_get_epoch_timings())
         logger.record_tabular('Epoch', epoch)
-        #logger.dump_tabular(with_prefix=False, with_timestamp=False)
+        logger.dump_tabular(with_prefix=False, with_timestamp=False)

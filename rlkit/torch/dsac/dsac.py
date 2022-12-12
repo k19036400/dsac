@@ -245,22 +245,27 @@ class DSACTrainer(TorchTrainer):
                     risk_weights = self.cvar(new_tau_hat, risk_param)
                 q1_new_actions = torch.sum(risk_weights * new_presum_tau * z1_new_actions, dim=1, keepdims=True)
                 q2_new_actions = torch.sum(risk_weights * new_presum_tau * z2_new_actions, dim=1, keepdims=True)
+
         q_new_actions = torch.min(q1_new_actions, q2_new_actions)
         with torch.no_grad():
             self.history = self.add_list(self.history, q_new_actions)
-            print (len(self.history[0]))
             lambda_risk = self.cvar(self.history, risk_param)
             lambda_loss = torch.sum(lambda_risk * self.history, dim=1, keepdims=True)
+            x = self.Cvar(self.history, risk_param)
             if self.lambda_value == None:
-                self.lambda_value = self.lambda_lr * lambda_loss
+                self.lambda_value = self.lambda_lr * x
             else:
-                self.lambda_value = self.lambda_value + self.lambda_lr * lambda_loss
+                self.lambda_value = self.lambda_value + self.lambda_lr * x
         #self.lambda_optimizer.zero_grad()
         #lambda_loss.backward()
         #self.lambda_optimizer.step()
         #gt.stamp('backward_lambda', unique=False)
         p_loss = (alpha * log_pi - q_new_actions)
         policy_loss = (p_loss + self.lambda_value * p_loss).mean()
+        print (float(p_loss.mean()))
+        print (float(self.lambda_value.mean()))
+        print (float(policy_loss))
+        print ("=======================")
         
         gt.stamp('preback_policy', unique=False)
 
@@ -328,6 +333,21 @@ class DSACTrainer(TorchTrainer):
     def get_diagnostics(self):
         return self.eval_statistics
 
+    def Cvar(self, original_tau, risk_param):
+        length = len(original_tau[0])
+        new_length = int(risk_param / 4)
+        if new_length < 1:
+            new_length = 1
+        x = []
+        for a1 in range (len(original_tau)):
+            y = list(map(lambda x: float(x), original_tau[a1]))
+            y.sort()
+            x.append(sum(y[:new_length]) / new_length)
+        device = torch.device('cuda')
+        cpu_tensor = torch.Tensor(x)
+        gpu_tensor = cpu_tensor.to(device)
+        return gpu_tensor
+
     def cvar(self, new_tau_hat, risk_param):
         changed_tau = new_tau_hat.clamp(0., 1.)
         if risk_param >= 0:
@@ -341,7 +361,7 @@ class DSACTrainer(TorchTrainer):
             return b
         x = []
         for a1 in range(int(len(a))):
-            if len(list(a[a1])) < 20:
+            if len(list(a[a1])) < 10:
                 x.append(list(a[a1]) + list(b[a1]))
             else:
                 x.append(list(a[a1])[1:] + list(b[a1]))
